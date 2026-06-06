@@ -1,0 +1,17 @@
+[project]
+name            = "vein-cli"
+version         = "0.1.0"
+description     = "Vein CLI — terminal interface for the RAG pipeline"
+readme          = "README.md"
+requires-python = ">=3.13"
+
+dependencies    = [
+    "vein-core",
+]
+
+[project.scripts]
+vein     = "vein_cli.main:app"
+vein-tui = "vein_tui.app:run"
+
+[tool.uv]
+package = true

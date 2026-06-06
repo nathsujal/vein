@@ -1,0 +1,13 @@
+[project]
+name            = "vein-tui"
+version         = "0.1.0"
+description     = "Vein TUI — Textual-based terminal interface"
+readme          = "README.md"
+requires-python = ">=3.13"
+
+dependencies    = [
+    "vein-core",
+]
+
+[tool.uv]
+package = true

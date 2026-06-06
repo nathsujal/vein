@@ -1,0 +1,11 @@
+[project]
+name            = "vein-core"
+version         = "0.1.0"
+description     = "Core RAG library for Vein — ingestion, retrieval, generation"
+readme          = "README.md"
+requires-python = ">=3.13"
+
+dependencies    = []
+
+[tool.uv]
+package = true  # makes this an installable workspace member

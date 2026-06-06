@@ -1,0 +1,19 @@
+[project]
+name            = "vein-daemon"
+version         = "0.1.0"
+description     = "Vein daemon — FastAPI HTTP + SSE server"
+readme          = "README.md"
+requires-python = ">=3.13"
+
+dependencies    = [
+    "vein-core",
+]
+
+[tool.uv.sources]
+vein-core     = { workspace = true }
+
+[project.scripts]
+vein-daemon = "vein_daemon.main:serve"
+
+[tool.uv]
+package = true
