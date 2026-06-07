@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .errors import ConfigError
+from vein_core.errors import ConfigValidationError
+from vein_core.utils import raise_if_errors
 
 
 # Paths
@@ -17,13 +18,6 @@ _VALID_LOG_LEVELS = frozenset({"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"})
 
 def _default_log_dir() -> Path:
     return APP_ROOT / "logs"
-
-
-def raise_if_errors(errors: list[str], context: str) -> None:
-    """Raise a single ConfigError listing all collected errors"""
-    if errors:
-        bullet_list = "\n".join(f"  • {e}" for e in errors)
-        raise ConfigError(f"{context}:\n{bullet_list}")
 
 
 # --- sections ---
@@ -47,7 +41,7 @@ class Daemon:
             )
         elif not (1 <= self.port <= 65535):
             errors.append(f"daemon.port must be 1..65535, got {self.port}")
-        raise_if_errors(errors, "Daemon configuration errors")
+        raise_if_errors(errors, "Daemon configuration errors", ConfigValidationError)
 
     @property
     def base_url(self) -> str:
@@ -93,7 +87,7 @@ class Log:
         elif self.backup_count < 0:
             errors.append(f"log.backup_count must be >= 0, got {self.backup_count}")
 
-        raise_if_errors(errors, "Log configuration errors")
+        raise_if_errors(errors, "Log configuration errors", ConfigValidationError)
 
 
 # root

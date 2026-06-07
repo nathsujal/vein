@@ -16,8 +16,6 @@ from vein_core.config import (
     CONFIG_PATH_DEFAULT,
     DEFAULT,
     AppConfig,
-    ConfigError,
-    ConfigSchemaMismatch,
     Daemon,
     Log,
     ensure_config,
@@ -27,25 +25,25 @@ from vein_core.config import (
     reload_config,
     write_config,
 )
-
+from vein_core.errors import ConfigValidationError, ConfigSchemaMismatch
 
 # errors.py
 
 class TestErrorHierarchy:
     def test_config_error_is_exception(self):
-        assert issubclass(ConfigError, Exception)
+        assert issubclass(ConfigValidationError, Exception)
 
     def test_schema_mismatch_is_config_error(self):
-        """ConfigSchemaMismatch must be catchable as ConfigError."""
-        assert issubclass(ConfigSchemaMismatch, ConfigError)
+        """ConfigSchemaMismatch must be catchable as ConfigValidationError."""
+        assert issubclass(ConfigSchemaMismatch, ConfigValidationError)
 
     def test_schema_mismatch_caught_by_config_error_handler(self):
-        with pytest.raises(ConfigError):
+        with pytest.raises(ConfigValidationError):
             raise ConfigSchemaMismatch("version '99' not supported")
 
     def test_config_error_message_preserved(self):
-        with pytest.raises(ConfigError, match="something broke"):
-            raise ConfigError("something broke")
+        with pytest.raises(ConfigValidationError, match="something broke"):
+            raise ConfigValidationError("something broke")
 
 
 # schema.py — Daemon
@@ -76,15 +74,15 @@ class TestDaemonHostValidation:
         assert d.host == "0.0.0.0"
 
     def test_host_empty_string(self):
-        with pytest.raises(ConfigError, match="non-empty"):
+        with pytest.raises(ConfigValidationError, match="non-empty"):
             Daemon(host="")
 
     def test_host_non_string_int(self):
-        with pytest.raises(ConfigError, match="daemon.host must be a string"):
+        with pytest.raises(ConfigValidationError, match="daemon.host must be a string"):
             Daemon(host=12345)  # type: ignore[arg-type]
 
     def test_host_non_string_none(self):
-        with pytest.raises(ConfigError, match="daemon.host must be a string"):
+        with pytest.raises(ConfigValidationError, match="daemon.host must be a string"):
             Daemon(host=None)  # type: ignore[arg-type]
 
 
@@ -96,32 +94,32 @@ class TestDaemonPortValidation:
         assert Daemon(port=65535).port == 65535
 
     def test_port_zero_invalid(self):
-        with pytest.raises(ConfigError, match="1..65535"):
+        with pytest.raises(ConfigValidationError, match="1..65535"):
             Daemon(port=0)
 
     def test_port_negative_invalid(self):
-        with pytest.raises(ConfigError, match="1..65535"):
+        with pytest.raises(ConfigValidationError, match="1..65535"):
             Daemon(port=-1)
 
     def test_port_above_max_invalid(self):
-        with pytest.raises(ConfigError, match="1..65535"):
+        with pytest.raises(ConfigValidationError, match="1..65535"):
             Daemon(port=65536)
 
     def test_port_string_invalid(self):
         """String port must be caught, not raise TypeError."""
-        with pytest.raises((ConfigError, TypeError)):
+        with pytest.raises((ConfigValidationError, TypeError)):
             Daemon(port="8765")  # type: ignore[arg-type]
 
     def test_port_float_invalid(self):
         """Float port must be caught, not silently accepted."""
-        with pytest.raises((ConfigError, TypeError)):
+        with pytest.raises((ConfigValidationError, TypeError)):
             Daemon(port=8765.0)  # type: ignore[arg-type]
 
 
 class TestDaemonMultipleErrors:
     def test_host_and_port_both_bad_reported_together(self):
-        """Both errors must appear in one ConfigError, not stop at the first."""
-        with pytest.raises(ConfigError) as exc_info:
+        """Both errors must appear in one ConfigValidationError, not stop at the first."""
+        with pytest.raises(ConfigValidationError) as exc_info:
             Daemon(host="", port=0)
         msg = str(exc_info.value)
         assert "host" in msg
@@ -165,16 +163,16 @@ class TestLogLevelValidation:
         assert Log(level=level).level == level.upper()
 
     def test_invalid_level_raises(self):
-        with pytest.raises(ConfigError, match="log.level"):
+        with pytest.raises(ConfigValidationError, match="log.level"):
             Log(level="VERBOSE")
 
     def test_empty_level_raises(self):
-        with pytest.raises(ConfigError, match="log.level"):
+        with pytest.raises(ConfigValidationError, match="log.level"):
             Log(level="")
 
     def test_non_string_level_raises(self):
-        """int level must produce ConfigError, not AttributeError."""
-        with pytest.raises((ConfigError, AttributeError)):
+        """int level must produce ConfigValidationError, not AttributeError."""
+        with pytest.raises((ConfigValidationError, AttributeError)):
             Log(level=1)  # type: ignore[arg-type]
 
 
@@ -183,11 +181,11 @@ class TestLogJsonFormat:
         assert Log(json_format=True).json_format is True
 
     def test_json_format_string_raises(self):
-        with pytest.raises(ConfigError, match="json_format"):
+        with pytest.raises(ConfigValidationError, match="json_format"):
             Log(json_format="true")  # type: ignore[arg-type]
 
     def test_json_format_int_raises(self):
-        with pytest.raises(ConfigError, match="json_format"):
+        with pytest.raises(ConfigValidationError, match="json_format"):
             Log(json_format=1)  # type: ignore[arg-type]
 
 
@@ -196,15 +194,15 @@ class TestLogMaxBytes:
         assert Log(max_bytes=1).max_bytes == 1
 
     def test_max_bytes_zero_raises(self):
-        with pytest.raises(ConfigError, match="max_bytes"):
+        with pytest.raises(ConfigValidationError, match="max_bytes"):
             Log(max_bytes=0)
 
     def test_max_bytes_negative_raises(self):
-        with pytest.raises(ConfigError, match="max_bytes"):
+        with pytest.raises(ConfigValidationError, match="max_bytes"):
             Log(max_bytes=-1)
 
     def test_max_bytes_string_raises(self):
-        with pytest.raises((ConfigError, TypeError)):
+        with pytest.raises((ConfigValidationError, TypeError)):
             Log(max_bytes="large")  # type: ignore[arg-type]
 
 
@@ -214,18 +212,18 @@ class TestLogBackupCount:
         assert Log(backup_count=0).backup_count == 0
 
     def test_backup_count_negative_raises(self):
-        with pytest.raises(ConfigError, match="backup_count"):
+        with pytest.raises(ConfigValidationError, match="backup_count"):
             Log(backup_count=-1)
 
     def test_backup_count_string_raises(self):
-        with pytest.raises((ConfigError, TypeError)):
+        with pytest.raises((ConfigValidationError, TypeError)):
             Log(backup_count="five")  # type: ignore[arg-type]
 
 
 class TestLogMultipleErrors:
     def test_multiple_errors_collected(self):
-        """All invalid fields must appear in one ConfigError message."""
-        with pytest.raises(ConfigError) as exc_info:
+        """All invalid fields must appear in one ConfigValidationError message."""
+        with pytest.raises(ConfigValidationError) as exc_info:
             Log(level="OOPS", json_format="yes", max_bytes=0, backup_count=-1)  # type: ignore[arg-type]
         msg = str(exc_info.value)
         assert "level" in msg
@@ -350,11 +348,11 @@ backup_count = 3
         assert cfg.log.dir == Path("~/vein-logs").expanduser()
 
 
-class TestLoadConfigErrors:
+class TestLoadConfigValidationErrors:
     def test_invalid_toml_syntax(self, tmp_path):
         p = tmp_path / "config.toml"
         _write(p, "this is not [ valid toml !!!")
-        with pytest.raises(ConfigError, match="Invalid TOML"):
+        with pytest.raises(ConfigValidationError, match="Invalid TOML"):
             load_config(p)
 
     def test_unsupported_config_version(self, tmp_path):
@@ -366,7 +364,7 @@ class TestLoadConfigErrors:
     def test_schema_mismatch_is_config_error(self, tmp_path):
         p = tmp_path / "config.toml"
         _write(p, 'config_version = "99"\n')
-        with pytest.raises(ConfigError):  # caught by base class
+        with pytest.raises(ConfigValidationError):  # caught by base class
             load_config(p)
 
     def test_unreadable_file(self, tmp_path):
@@ -374,7 +372,7 @@ class TestLoadConfigErrors:
         _write(p, 'config_version = "1"\n')
         os.chmod(p, 0o000)
         try:
-            with pytest.raises(ConfigError, match="Failed to read"):
+            with pytest.raises(ConfigValidationError, match="Failed to read"):
                 load_config(p)
         finally:
             os.chmod(p, 0o644)
@@ -435,7 +433,7 @@ class TestWriteConfig:
         locked.mkdir()
         os.chmod(locked, 0o555)
         try:
-            with pytest.raises(ConfigError):
+            with pytest.raises(ConfigValidationError):
                 write_config(DEFAULT, locked / "sub" / "config.toml")
         finally:
             os.chmod(locked, 0o755)
@@ -498,7 +496,7 @@ class TestEnsureConfig:
         locked.mkdir()
         os.chmod(locked, 0o555)
         try:
-            with pytest.raises(ConfigError):
+            with pytest.raises(ConfigValidationError):
                 ensure_config(locked / "sub" / "config.toml")
         finally:
             os.chmod(locked, 0o755)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from .errors import ConfigError, ConfigSchemaMismatch
 from .loader import (
     ensure_config,
     load_config,
@@ -24,8 +23,6 @@ __all__ = [
     "ensure_config",
     "get_config",
     "reload_config",
-    "ConfigError",
-    "ConfigSchemaMismatch",
 ]
 
 

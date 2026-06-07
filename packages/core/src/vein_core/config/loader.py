@@ -8,7 +8,7 @@ from typing import Any
 
 import tomli_w
 
-from .errors import ConfigError, ConfigSchemaMismatch
+from vein_core.errors import ConfigValidationError, ConfigSchemaMismatch
 from .schema import AppConfig, DEFAULT, CONFIG_PATH_DEFAULT, Daemon, Log
 
 
@@ -20,8 +20,8 @@ SUPPORTED_CONFIG_VERSIONS: frozenset[str] = frozenset({"1"})
 def _coerce_daemon(raw: dict[str, Any]) -> Daemon:
     try:
         return Daemon(**raw)
-    except (TypeError, ConfigError) as exc:
-        raise ConfigError(f"Invalid daemon configuration: {exc}") from exc
+    except (TypeError, ConfigValidationError) as exc:
+        raise ConfigValidationError(f"Invalid daemon configuration: {exc}") from exc
 
 def _coerce_log(raw: dict[str, Any]) -> Log:
     data = dict(raw)
@@ -29,8 +29,8 @@ def _coerce_log(raw: dict[str, Any]) -> Log:
         if "dir" in data and not isinstance(data["dir"], Path):
             data["dir"] = Path(data["dir"]).expanduser()
         return Log(**data)
-    except (TypeError, ConfigError) as exc:
-        raise ConfigError(f"Invalid log configuration: {exc}") from exc
+    except (TypeError, ConfigValidationError) as exc:
+        raise ConfigValidationError(f"Invalid log configuration: {exc}") from exc
 
 def _coerce(raw: dict[str, Any]) -> AppConfig:
     return AppConfig(
@@ -46,9 +46,9 @@ def load_config(path: Path) -> AppConfig:
     try:
         raw = tomllib.loads(path.read_text("utf-8"))
     except tomllib.TOMLDecodeError as exc:
-        raise ConfigError(f"Invalid TOML in {path}: {exc}") from exc
+        raise ConfigValidationError(f"Invalid TOML in {path}: {exc}") from exc
     except OSError as exc:
-        raise ConfigError(f"Failed to read {path}: {exc}") from exc
+        raise ConfigValidationError(f"Failed to read {path}: {exc}") from exc
 
     raw_version = str(raw.get("config_version", DEFAULT.config_version))
     if raw_version not in SUPPORTED_CONFIG_VERSIONS:
@@ -84,7 +84,7 @@ def write_config(cfg: AppConfig, path: Path) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        raise ConfigError(f"Failed to create {path.parent}: {exc}") from exc
+        raise ConfigValidationError(f"Failed to create {path.parent}: {exc}") from exc
 
     payload = tomli_w.dumps(_to_toml_dict(cfg))
 
@@ -97,7 +97,7 @@ def write_config(cfg: AppConfig, path: Path) -> None:
             tmp.unlink(missing_ok=True)
         except OSError:
             pass
-        raise ConfigError(f"Failed to write {path}: {exc}") from exc
+        raise ConfigValidationError(f"Failed to write {path}: {exc}") from exc
 
 
 def ensure_config(path: Path) -> bool:
@@ -107,7 +107,7 @@ def ensure_config(path: Path) -> bool:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        raise ConfigError(f"Failed to create {path.parent}: {exc}") from exc
+        raise ConfigValidationError(f"Failed to create {path.parent}: {exc}") from exc
 
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
 
@@ -116,7 +116,7 @@ def ensure_config(path: Path) -> bool:
     except FileExistsError:
         return False
     except OSError as exc:
-        raise ConfigError(f"Failed to create {path}: {exc}") from exc
+        raise ConfigValidationError(f"Failed to create {path}: {exc}") from exc
 
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
