@@ -5,7 +5,9 @@ description     = "Core RAG library for Vein — ingestion, retrieval, generatio
 readme          = "README.md"
 requires-python = ">=3.13"
 
-dependencies    = []
+dependencies    = [
+    "tomli-w>=1.2.0",
+]
 
 [tool.uv]
 package = true  # makes this an installable workspace member
