@@ -8,12 +8,14 @@ from .loader import (
     load_or_create,
     write_config,
 )
-from .schema import APP_ROOT, CONFIG_PATH_DEFAULT, DEFAULT, AppConfig, Daemon, Log
+from .schema import APP_ROOT, CONFIG_PATH_DEFAULT, DEFAULT, AppConfig, Daemon, Log, LLM, Embedder
 
 __all__ = [
     "AppConfig",
     "Daemon",
     "Log",
+    "LLM",
+    "Embedder",
     "APP_ROOT",
     "CONFIG_PATH_DEFAULT",
     "DEFAULT",

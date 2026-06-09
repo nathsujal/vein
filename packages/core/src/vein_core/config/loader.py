@@ -9,7 +9,7 @@ from typing import Any
 import tomli_w
 
 from vein_core.errors import ConfigValidationError, ConfigSchemaMismatch
-from .schema import AppConfig, DEFAULT, CONFIG_PATH_DEFAULT, Daemon, Log
+from .schema import AppConfig, DEFAULT, CONFIG_PATH_DEFAULT, Daemon, Log, LLM, Embedder
 
 
 SUPPORTED_CONFIG_VERSIONS: frozenset[str] = frozenset({"1"})
@@ -24,7 +24,6 @@ def _coerce_daemon(raw: dict[str, Any]) -> Daemon:
         raise ConfigValidationError(f"Invalid daemon configuration: {exc}") from exc
 
 def _coerce_log(raw: dict[str, Any]) -> Log:
-    data = dict(raw)
     try:
         if "dir" in data and not isinstance(data["dir"], Path):
             data["dir"] = Path(data["dir"]).expanduser()
@@ -32,11 +31,25 @@ def _coerce_log(raw: dict[str, Any]) -> Log:
     except (TypeError, ConfigValidationError) as exc:
         raise ConfigValidationError(f"Invalid log configuration: {exc}") from exc
 
+def _coerce_llm(raw: dict[str, Any]) -> LLM:
+    try: 
+        return LLM(**raw)
+    except (TypeError, ConfigValidationError) as exc:
+        raise ConfigValidationError(f"Invalid llm configuration: {exc}") from exc
+
+def _coerce_embedding(raw: dict[str, Any]) -> Embedder:
+    try: 
+        return Embedder(**raw)
+    except (TypeError, ConfigValidationError) as exc:
+        raise ConfigValidationError(f"Invalid embedding configuration: {exc}") from exc
+
 def _coerce(raw: dict[str, Any]) -> AppConfig:
     return AppConfig(
         config_version=str(raw.get("config_version", DEFAULT.config_version)),
         daemon=_coerce_daemon(raw.get("daemon") or {}),
         log=_coerce_log(raw.get("log") or {}),
+        llm=_coerce_llm(raw.get("llm") or {}),
+        embedding=_coerce_embedding(raw.get("embedding") or {}),
     )
 
 

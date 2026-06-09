@@ -6,6 +6,7 @@ readme          = "README.md"
 requires-python = ">=3.13"
 
 dependencies    = [
+    "httpx>=0.28.1",
     "structlog>=26.1.0",
     "tomli-w>=1.2.0",
 ]
